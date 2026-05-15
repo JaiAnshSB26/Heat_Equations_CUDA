@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include <utility>
+#include <chrono>
 
 int main() {
     HeatParams p;
@@ -17,6 +18,8 @@ int main() {
 
     write_snapshot(cur, p, 0);
 
+    const auto start = std::chrono::high_resolution_clock::now(); //important addition for the runtime measurement.
+
     for (int s = 1; s <= p.num_steps; ++s) {
         step_once(cur, nxt, p);
         std::swap(cur, nxt);
@@ -27,6 +30,10 @@ int main() {
         }
     }
 
+    const auto end = std::chrono::high_resolution_clock::now(); //for runtime measurement again.
+    const std::chrono::duration<double> elapsed = end - start;
+
+    std::cout << "Total runtime: " << elapsed.count() << " seconds\n";
     std::cout << "Finished sequential heat simulation.\n";
     return 0;
 }
