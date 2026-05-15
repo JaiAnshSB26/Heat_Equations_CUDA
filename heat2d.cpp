@@ -1,6 +1,8 @@
 #include "heat2d.hpp"
 
 #include <cassert>
+#include <cstdio>
+#include <filesystem>
 
 Grid make_grid(const HeatParams& p) {
     Grid g(p.width * p.height, 0.0);
@@ -35,6 +37,23 @@ void step_once(const Grid& cur, Grid& nxt, const HeatParams& p) {
     }
 }
 
-void write_snapshot(const Grid&, const HeatParams&, int) {
-    // I would implement this later.
+void write_snapshot(const Grid& g, const HeatParams& p, int step_num) {
+    std::filesystem::create_directories(p.out_dir);
+
+    char fname[512];
+    std::snprintf(fname, sizeof(fname), "%s/snap_%06d.dat",
+                  p.out_dir.c_str(), step_num);
+
+    FILE* f = std::fopen(fname, "w");
+    if (!f) {
+        std::perror(fname);
+        return;
+    }
+    for (int i = 0; i < p.height; ++i) {
+        for (int j = 0; j < p.width; ++j) {
+            std::fprintf(f, "%d %d %.8f\n", j, i, g[idx(i, j, p.width)]);
+        }
+        std::fputc('\n', f);
+    }
+    std::fclose(f);
 }
