@@ -6,12 +6,24 @@
 
 Grid make_grid(const HeatParams& p) {
     Grid g(p.width * p.height, 0.0);
-
+    
     // Single hot point at the centre.
-    const int center_row = p.height / 2;
-    const int center_col = p.width / 2;
+    const int cx = p.width / 2;
+    const int cy = p.height / 2;
 
-    g[idx(center_row, center_col, p.width)] = 1.0;
+    const int radius = 12;
+
+    for (int i = 0; i < p.height; ++i) {
+        for (int j = 0; j < p.width; ++j) {
+
+            int dx = j - cx;
+            int dy = i - cy;
+
+            if (dx * dx + dy * dy <= radius * radius) {
+                g[idx(i, j, p.width)] = 1.0;
+            }
+        }
+    }
 
     return g;
 }

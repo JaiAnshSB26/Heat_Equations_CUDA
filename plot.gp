@@ -24,7 +24,7 @@ set ylabel "y"
 
 set size ratio -1
 
-CMAX = 0.10
+CMAX = 1.0
 set cbrange [0:CMAX]
 set cblabel "Temperature"
 
