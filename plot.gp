@@ -1,13 +1,10 @@
-set terminal pngcairo size 900,700
-set output "snapshots/heatmap_000200.png"
+# plot.gp  –  visualise heat equation snapshots produced by heat2d
 
-set title "2D Heat Equation - step 200"
-set xlabel "x"
-set ylabel "y"
+STEPS  = 2000
+EVERY  = 100
 
-set size ratio -1
-set pm3d map
-unset key
+W = 255
+H = 255
 
 set palette defined ( \
     0.00 "#000000", \
@@ -17,7 +14,50 @@ set palette defined ( \
     1.00 "#FFFF00"  \
 )
 
-set cbrange [0:0.10]
+set xrange [0:W]
+set yrange [0:H]
+
+unset key
+
+set xlabel "x"
+set ylabel "y"
+
+set size ratio -1
+
+CMAX = 0.10
+set cbrange [0:CMAX]
 set cblabel "Temperature"
 
-plot "snapshots/snap_000200.dat" using 1:2:3 with image pixels
+# PNG FRAMES
+
+set terminal pngcairo size 700,640 enhanced font "Arial,12"
+
+do for [s = 0:STEPS:EVERY] {
+
+    fname = sprintf("snapshots/snap_%06d.dat", s)
+
+    set output sprintf("snapshots/snap_%06d.png", s)
+
+    set title sprintf("Heat diffusion - step %d", s)
+
+    plot fname using 1:2:3 with image pixels
+}
+
+# ANIMATED GIF
+
+set terminal gif animate delay 8 size 700,640 optimize
+
+set output "snapshots/heat_anim.gif"
+
+do for [s = 0:STEPS:EVERY] {
+
+    fname = sprintf("snapshots/snap_%06d.dat", s)
+
+    set title sprintf("Heat diffusion - step %d", s)
+
+    plot fname using 1:2:3 with image pixels
+}
+
+set output
+
+print "Generated PNG frames and animated GIF."

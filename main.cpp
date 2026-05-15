@@ -8,8 +8,8 @@ int main() {
     p.width = 256;
     p.height = 256;
     p.lambda = 0.24;
-    p.num_steps = 200;
-    p.snapshot_every = 50;
+    p.num_steps = 2000; //200.
+    p.snapshot_every = 100; //50.
     p.out_dir = "snapshots";
 
     Grid cur = make_grid(p);
