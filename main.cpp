@@ -24,6 +24,8 @@ int main() {
         step_once(cur, nxt, p);
         std::swap(cur, nxt);
 
+        verify_solution(cur, p, s);
+
         if (s % p.snapshot_every == 0) {
             write_snapshot(cur, p, s);
             std::cout << "Wrote snapshot at step " << s << "\n";

@@ -31,3 +31,5 @@ Grid make_grid(const HeatParams& p);
 void step_once(const Grid& cur, Grid& nxt, const HeatParams& p);
 // Finally for now a method to write `g` to "<out_dir>/snap_NNNNNN.dat" in gnuplot column format.
 void write_snapshot(const Grid& g, const HeatParams& p, int step_num);
+// Method for verifying solutions
+void verify_solution(const Grid& g, const HeatParams& p, int step_num);

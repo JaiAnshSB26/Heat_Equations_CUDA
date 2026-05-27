@@ -69,3 +69,44 @@ void write_snapshot(const Grid& g, const HeatParams& p, int step_num) {
     }
     std::fclose(f);
 }
+
+void verify_solution(const Grid& g, const HeatParams& p, int step_num) {
+    const int W = p.width;
+    const int H = p.height;
+    const int cx = W / 2;
+    const int cy = H / 2;
+
+    double max_val = 0.0;
+    double min_val = 1.0;
+    
+    for (int i = 0; i < H; ++i) {
+        for (int j = 0; j < W; ++j) {
+            double val = g[idx(i, j, W)];
+            if (val > max_val) max_val = val;
+            if (val < min_val) min_val = val;
+        }
+    }
+
+    if (min_val < 0.0 || max_val > 1.0) {
+        std::printf("[CRITICAL ERROR] Step %d: Numerical instability detected! Min: %.4f, Max: %.4f\n", 
+                    step_num, min_val, max_val);
+        return;
+    }
+
+    int test_dist = 20; 
+    double north = g[idx(cy - test_dist, cx, W)];
+    double south = g[idx(cy + test_dist, cx, W)];
+    double west  = g[idx(cy, cx - test_dist, W)];
+    double east  = g[idx(cy, cx + test_dist, W)];
+
+    double epsilon = 1e-7; // we add this in order to allow some potential minor differences
+    if (std::abs(north - south) > epsilon || std::abs(east - west) > epsilon || std::abs(north - east) > epsilon) {
+        std::printf("[ERROR] Step %d: Asymmetric diffusion detected! N:%.5f, S:%.5f, E:%.5f, W:%.5f\n",
+                    step_num, north, south, east, west);
+    } else {
+        if (step_num % p.snapshot_every == 0 || step_num == p.num_steps) {
+            std::printf("[VALIDATION] Step %4d | Max Temp (Center Decay): %.5f | Symmetry: PERFECT\n", 
+                        step_num, max_val);
+        }
+    }
+}
