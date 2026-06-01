@@ -29,3 +29,22 @@ make plot
 Please note: Outputs are written to `snapshots/` (not present in the repository since generated files are gitignored due to the reasons of file size and them just being generated outputs!).
 
 The solver evolves the heat equation on a 2D grid using double buffering and exports snapshots compatible with gnuplot visualization.
+
+## Part 3 - CUDA parallelization
+
+The same explicit scheme is parallelized on the GPU: one CUDA thread computes one interior grid cell using flat row-major device arrays and on-device double buffering. Boundary cells are never written, so they stay fixed at 0 (matching the CPU path). Requires the NVIDIA CUDA Toolkit (`nvcc`).
+
+### Build (CUDA):
+
+```bash
+make cuda
+```
+
+### Run (CUDA):
+
+```bash
+make run_cuda
+```
+
+`run_cuda` runs both the CPU reference and the GPU solver on identical input and prints the **max absolute error** (GPU vs CPU), per-path timings, and the speedup.
+GPU compute time is measured with CUDA events and excludes host/device copies and file I/O. The shared gnuplot visualization (`make plot`) applies to both paths since the GPU output matches the CPU reference to machine precision.
