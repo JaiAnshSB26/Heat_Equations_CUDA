@@ -2,6 +2,7 @@
 
 #include <cstdio>
 #include <cstdlib>
+#include <utility> // added for std::swap.
 #include <cuda_runtime.h>
 
 // Abort on the first CUDA error; keeping call sites readable.
@@ -57,4 +58,39 @@ void step_once_cuda(const Grid& cur, Grid& nxt, const HeatParams& p) {
 
     CUDA_CHECK(cudaFree(d_cur));
     CUDA_CHECK(cudaFree(d_nxt));
+}
+
+//The entire simulation now.
+void solve_cuda(const Grid& initial, Grid& out, const HeatParams& p) {
+    const int W = p.width;
+    const int H = p.height;
+    const size_t bytes = static_cast<size_t>(W) * H * sizeof(double);
+
+    double* d_a = nullptr;
+    double* d_b = nullptr;
+    CUDA_CHECK(cudaMalloc(&d_a, bytes));
+    CUDA_CHECK(cudaMalloc(&d_b, bytes));
+
+    // One H2D copy. Zero the second buffer so its boundary ring starts at 0;
+    // both rings are then never written, so they stay 0 for every step.
+    CUDA_CHECK(cudaMemcpy(d_a, initial.data(), bytes, cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMemset(d_b, 0, bytes));
+
+    const dim3 block(kBlock, kBlock);
+    const dim3 grid((W + kBlock - 1) / kBlock, (H + kBlock - 1) / kBlock);
+
+    double* src = d_a;
+    double* dst = d_b;
+    for (int s = 0; s < p.num_steps; ++s) {
+        heat_kernel<<<grid, block>>>(src, dst, W, H, p.lambda);
+        std::swap(src, dst);  // pointer swap only: no data movement
+    }
+    CUDA_CHECK(cudaGetLastError());
+    CUDA_CHECK(cudaDeviceSynchronize());
+
+    out.assign(static_cast<size_t>(W) * H, 0.0);
+    CUDA_CHECK(cudaMemcpy(out.data(), src, bytes, cudaMemcpyDeviceToHost));
+
+    CUDA_CHECK(cudaFree(d_a));
+    CUDA_CHECK(cudaFree(d_b));
 }
