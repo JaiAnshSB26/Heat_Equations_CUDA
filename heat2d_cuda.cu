@@ -61,7 +61,7 @@ void step_once_cuda(const Grid& cur, Grid& nxt, const HeatParams& p) {
 }
 
 //The entire simulation now.
-void solve_cuda(const Grid& initial, Grid& out, const HeatParams& p) {
+void solve_cuda(const Grid& initial, Grid& out, const HeatParams& p, float* gpu_ms) {
     const int W = p.width;
     const int H = p.height;
     const size_t bytes = static_cast<size_t>(W) * H * sizeof(double);
@@ -71,26 +71,37 @@ void solve_cuda(const Grid& initial, Grid& out, const HeatParams& p) {
     CUDA_CHECK(cudaMalloc(&d_a, bytes));
     CUDA_CHECK(cudaMalloc(&d_b, bytes));
 
-    // One H2D copy. Zero the second buffer so its boundary ring starts at 0;
-    // both rings are then never written, so they stay 0 for every step.
+    // One H2D copy. Zero the second buffer so its boundary ring starts at 0; both rings are then never written, so they stay 0 for every step.
     CUDA_CHECK(cudaMemcpy(d_a, initial.data(), bytes, cudaMemcpyHostToDevice));
     CUDA_CHECK(cudaMemset(d_b, 0, bytes));
 
     const dim3 block(kBlock, kBlock);
     const dim3 grid((W + kBlock - 1) / kBlock, (H + kBlock - 1) / kBlock);
 
+    // We time only the kernel loop: events bracket the compute, not the copies.
+    cudaEvent_t beg, end;
+    CUDA_CHECK(cudaEventCreate(&beg));
+    CUDA_CHECK(cudaEventCreate(&end));
+
     double* src = d_a;
     double* dst = d_b;
+    CUDA_CHECK(cudaEventRecord(beg));
     for (int s = 0; s < p.num_steps; ++s) {
         heat_kernel<<<grid, block>>>(src, dst, W, H, p.lambda);
         std::swap(src, dst);  // pointer swap only: no data movement
     }
+    CUDA_CHECK(cudaEventRecord(end));
+    CUDA_CHECK(cudaEventSynchronize(end));
     CUDA_CHECK(cudaGetLastError());
-    CUDA_CHECK(cudaDeviceSynchronize());
 
+    if (gpu_ms) CUDA_CHECK(cudaEventElapsedTime(gpu_ms, beg, end));
+
+    // src holds the final state after the last swap (copy is untimed).
     out.assign(static_cast<size_t>(W) * H, 0.0);
     CUDA_CHECK(cudaMemcpy(out.data(), src, bytes, cudaMemcpyDeviceToHost));
 
+    CUDA_CHECK(cudaEventDestroy(beg));
+    CUDA_CHECK(cudaEventDestroy(end));
     CUDA_CHECK(cudaFree(d_a));
     CUDA_CHECK(cudaFree(d_b));
 }
