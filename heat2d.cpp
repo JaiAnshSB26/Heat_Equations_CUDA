@@ -4,6 +4,8 @@
 #include <cstdio>
 #include <filesystem>
 
+#include <cmath> //needed for the abs function in the verify_solution method.
+
 Grid make_grid(const HeatParams& p) {
     Grid g(p.width * p.height, 0.0);
     

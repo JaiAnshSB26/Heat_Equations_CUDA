@@ -35,7 +35,15 @@ int main() {
     const auto end = std::chrono::high_resolution_clock::now(); //for runtime measurement again.
     const std::chrono::duration<double> elapsed = end - start;
 
+    // std::cout << "Total runtime: " << elapsed.count() << " seconds\n";
+    // std::cout << "Finished sequential heat simulation.\n";
+
+    const double mcells =
+        static_cast<double>(p.width) * p.height * p.num_steps / 1.0e6;
+
     std::cout << "Total runtime: " << elapsed.count() << " seconds\n";
+    std::cout << "Throughput: " << mcells / elapsed.count()
+            << " Mcell-updates/s\n";
     std::cout << "Finished sequential heat simulation.\n";
     return 0;
 }
