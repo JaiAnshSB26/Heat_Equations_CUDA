@@ -4,6 +4,13 @@ TARGET   := heat2d
 SRCS     := main.cpp heat2d.cpp
 OBJS     := $(SRCS:.cpp=.o)
 
+# CUDA build. sm_86 = RTX 3060 (Ampere); change for other GPUs.
+# reminder - run nvidia-smi to get the architecture of GPU, change sm_86 to its compute capability or drop -arch to use nvcc's default.
+NVCC        := nvcc
+NVCCFLAGS   := -std=c++17 -O2 -arch=sm_86
+CUDA_TARGET := heat2d_cuda
+CUDA_SRCS   := main_cuda.cpp heat2d.cpp heat2d_cuda.cu
+
 # Build
 $(TARGET): $(OBJS)
 	$(CXX) $(CXXFLAGS) -o $@ $^
@@ -11,9 +18,18 @@ $(TARGET): $(OBJS)
 %.o: %.cpp heat2d.hpp
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
 
+# CUDA build: nvcc compiles the .cu kernels and the host sources in one shot.
+cuda: $(CUDA_TARGET)
+
+$(CUDA_TARGET): $(CUDA_SRCS) heat2d.hpp heat2d_cuda.cuh
+	$(NVCC) $(NVCCFLAGS) -o $@ $(CUDA_SRCS)
+
 # Convenience targets (that's what we call it I guess?)
 run: $(TARGET)
 	./$(TARGET)
+
+run_cuda: $(CUDA_TARGET)
+	./$(CUDA_TARGET)
 
 # FUTURE THING I Planned - Render PNG snapshots and an animated GIF (requires gnuplot >= 5). This is for make plot method.
 plot:
@@ -21,10 +37,10 @@ plot:
 
 # Remove build artefacts; (FUTURE) keep snapshots so gnuplot can still read them.
 clean:
-	rm -f $(TARGET) $(OBJS)
+	rm -f $(TARGET) $(OBJS) $(CUDA_TARGET)
 
 # Remove everything including generated data.
 distclean: clean
 	rm -rf snapshots
 #(FUTUTE AGAIN).
-.PHONY: run plot clean distclean
+.PHONY: run run_cuda cuda plot clean distclean
