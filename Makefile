@@ -6,8 +6,14 @@ OBJS     := $(SRCS:.cpp=.o)
 
 # CUDA build. sm_86 = RTX 3060 (Ampere); change for other GPUs.
 # reminder - run nvidia-smi to get the architecture of GPU, change sm_86 to its compute capability or drop -arch to use nvcc's default.
+
+#Changing around stuff for the school machines.
+#CUDA_HOME := /usr/local/cuda-12.9.1
+
+#NVCC        := $(CUDA_HOME)/bin/nvcc
 NVCC        := nvcc
 NVCCFLAGS   := -std=c++17 -O2 -arch=sm_86
+# NVCCFLAGS   := -std=c++17 -O2 -arch=sm_89  #sm_89 for the school machines, sm_86 for nvidia rtx3060 I approximate.
 CUDA_TARGET := heat2d_cuda
 CUDA_SRCS   := main_cuda.cpp heat2d.cpp heat2d_cuda.cu
 
