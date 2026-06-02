@@ -9,6 +9,8 @@
 #include <cstddef>
 #include <iostream>
 #include <utility>
+#include <vector>
+#include <iomanip>
 
 int main() {
     HeatParams p;
@@ -56,5 +58,71 @@ int main() {
     std::cout << "GPU time: " << gpu_s << " s  (" << mcells / gpu_s
               << " Mcell-updates/s)\n";
     std::cout << "Speedup (CPU/GPU): " << cpu_s / gpu_s << "x\n";
+
+    std::cout << "\n=========================================================================================\n";
+    std::cout << "                      PART 4: EXTENDED SCALING PERFORMANCE BENCHMARK                     \n";
+    std::cout << "=========================================================================================\n";
+    std::cout << "| Grid Size | Steps | CPU Time (s) | CPU Mcells/s | GPU Time (s) | GPU Mcells/s | Speedup |\n";
+    std::cout << "|-----------|-------|--------------|--------------|--------------|--------------|---------|\n";
+
+    struct BenchCase {
+        int size;
+        int steps;
+    };
+
+    std::vector<BenchCase> cases = {
+        {128,  5000},
+        {256,  2000}, // Re-run to verify consistency
+        {512,  1000},
+        {1024,  500},
+        {2048,  200},
+        {4096,   50}
+    };
+
+    for (const auto& c : cases) {
+        HeatParams bp;
+        bp.width = c.size;
+        bp.height = c.size;
+        bp.lambda = p.lambda;
+        bp.num_steps = c.steps;
+        bp.snapshot_every = c.steps + 1; // Turn off file writing for benchmarks
+        bp.out_dir = "snapshots";
+
+        const std::size_t bN = static_cast<std::size_t>(bp.width) * bp.height;
+        const Grid b_initial = make_grid(bp);
+
+        // --- CPU ---
+        Grid b_cpu_cur = b_initial;
+        Grid b_cpu_nxt(bN, 0.0);
+        auto bt0 = std::chrono::high_resolution_clock::now();
+        for (int s = 1; s <= bp.num_steps; ++s) {
+            step_once(b_cpu_cur, b_cpu_nxt, bp);
+            std::swap(b_cpu_cur, b_cpu_nxt);
+        }
+        auto bt1 = std::chrono::high_resolution_clock::now();
+        double b_cpu_s = std::chrono::duration<double>(bt1 - bt0).count();
+
+        // --- GPU ---
+        Grid b_gpu_final;
+        float b_gpu_ms = 0.0f;
+        solve_cuda(b_initial, b_gpu_final, bp, &b_gpu_ms);
+        double b_gpu_s = b_gpu_ms / 1000.0;
+
+        // --- Metrics ---
+        double total_updates = static_cast<double>(bN) * bp.num_steps;
+        double cpu_mcells = (total_updates / b_cpu_s) / 1e6;
+        double gpu_mcells = (total_updates / b_gpu_s) / 1e6;
+        double speedup = b_cpu_s / b_gpu_s;
+
+        std::cout << "| " << c.size << "x" << c.size 
+                  << " | " << std::setw(5) << c.steps
+                  << " | " << std::fixed << std::setprecision(4) << std::setw(12) << b_cpu_s
+                  << " | " << std::setprecision(1) << std::setw(12) << cpu_mcells
+                  << " | " << std::setprecision(4) << std::setw(12) << b_gpu_s
+                  << " | " << std::setprecision(1) << std::setw(12) << gpu_mcells
+                  << " | " << std::setprecision(1) << std::setw(6) << speedup << "x"
+                  << " |\n";
+    }
+    std::cout << "=========================================================================================\n";
     return 0;
 }
