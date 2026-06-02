@@ -60,7 +60,7 @@ int main() {
     std::cout << "Speedup (CPU/GPU): " << cpu_s / gpu_s << "x\n";
 
     std::cout << "\n=========================================================================================\n";
-    std::cout << "                      PART 4: EXTENDED SCALING PERFORMANCE BENCHMARK                     \n";
+    std::cout << "                      EXTENDED SCALING PERFORMANCE BENCHMARK                     \n";
     std::cout << "=========================================================================================\n";
     std::cout << "| Grid Size | Steps | CPU Time (s) | CPU Mcells/s | GPU Time (s) | GPU Mcells/s | Speedup |\n";
     std::cout << "|-----------|-------|--------------|--------------|--------------|--------------|---------|\n";
@@ -124,5 +124,30 @@ int main() {
                   << " |\n";
     }
     std::cout << "=========================================================================================\n";
+    std::cout << "\n=========================================================================================\n";
+    std::cout << "                          END-TO-END TIME (INCLUDING MEMORY COPIES)                       \n";
+    std::cout << "=========================================================================================\n";
+    
+    // We reuse the parameters 'p' and 'initial' grid from your original 256x256 setup
+    auto t_gpu_total_start = std::chrono::high_resolution_clock::now();
+
+    Grid e2e_gpu_final;
+    // solve_cuda internally handles cudaMalloc, cudaMemcpy H2D, the loop, and cudaMemcpy D2H
+    solve_cuda(initial, e2e_gpu_final, p, nullptr); 
+
+    auto t_gpu_total_end = std::chrono::high_resolution_clock::now();
+    double gpu_total_seconds = std::chrono::duration<double>(t_gpu_total_end - t_gpu_total_start).count();
+
+    std::cout << "Original 256x256 Case (" << p.num_steps << " steps):\n";
+    std::cout << "Sequential CPU Total Time                 : " << cpu_s << " s\n";
+    // This is the raw loop time measured inside solve_cuda via CUDA events
+    std::cout << "Pure GPU Compute Time (Events)            : " << gpu_s << " s\n"; 
+    // This is the clock time measured by the CPU host around the whole function call
+    std::cout << "Real-World GPU Time (Host Clock w/ Copies): " << gpu_total_seconds << " s\n";
+    std::cout << "-----------------------------------------------------------------------------------------\n";
+    std::cout << "Pure Compute Speedup (Isolated)           : " << cpu_s / gpu_s << "x\n";
+    std::cout << "Effective Real-World Speedup (End-to-End) : " << cpu_s / gpu_total_seconds << "x\n";
+    std::cout << "=========================================================================================\n";
+    
     return 0;
 }
