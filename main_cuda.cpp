@@ -138,6 +138,9 @@ int main() {
     auto t_gpu_total_end = std::chrono::high_resolution_clock::now();
     double gpu_total_seconds = std::chrono::duration<double>(t_gpu_total_end - t_gpu_total_start).count();
 
+    // The benchmark table above left the stream sticky in std::fixed with
+    // setprecision(1); reset so the end-to-end times print at full precision.
+    std::cout << std::defaultfloat << std::setprecision(6);
     std::cout << "Original 256x256 Case (" << p.num_steps << " steps):\n";
     std::cout << "Sequential CPU Total Time                 : " << cpu_s << " s\n";
     // This is the raw loop time measured inside solve_cuda via CUDA events
